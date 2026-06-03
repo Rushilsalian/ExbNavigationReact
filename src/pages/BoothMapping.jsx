@@ -4,7 +4,7 @@ import BoothList from '../components/booths/BoothList'
 import BoothEditor from '../components/booths/BoothEditor'
 import BoothProperties from '../components/booths/BoothProperties'
 import EmptyState from '../components/common/EmptyState'
-import SvgCanvas from '../components/svg/SvgCanvas'
+import BoothCanvas from '../components/booths/BoothCanvas'
 
 function BoothMapping() {
   const activeHallId = useHallStore(s => s.activeHallId)
@@ -32,7 +32,7 @@ function BoothMapping() {
       {/* Canvas area */}
       <div className="flex-1 bg-white rounded-xl border border-slate-200 overflow-hidden">
         {activeHallId ? (
-          <SvgCanvas />
+          <BoothCanvas />
         ) : (
           <EmptyState
             title="No Hall Selected"

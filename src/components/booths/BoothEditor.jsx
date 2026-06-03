@@ -6,11 +6,17 @@ import Button from '../common/Button'
 import { generateId } from '../../utils/graphHelpers'
 
 const CATEGORIES = ['General', 'Food & Beverage', 'Technology', 'Fashion', 'Art', 'Services', 'Other']
+const SHAPE_TYPES = [
+  { value: 'rect', label: 'Rectangle' },
+  { value: 'circle', label: 'Circle' },
+  { value: 'polygon', label: 'Hexagon' },
+]
 
 function BoothEditor() {
   const [name, setName] = useState('')
   const [number, setNumber] = useState('')
   const [category, setCategory] = useState('General')
+  const [shapeType, setShapeType] = useState('rect')
   const [errors, setErrors] = useState({})
 
   const addBooth = useBoothStore(s => s.addBooth)
@@ -35,13 +41,16 @@ function BoothEditor() {
       name: name.trim(),
       number: number.trim(),
       category,
-      x: 0, y: 0, width: 80, height: 60,
+      shapeType,
+      x: 100, y: 100, width: 80, height: 60,
+      rotation: 0,
       createdAt: new Date().toISOString(),
     })
 
     setName('')
     setNumber('')
     setCategory('General')
+    setShapeType('rect')
   }
 
   return (
@@ -68,6 +77,16 @@ function BoothEditor() {
           className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         >
           {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-slate-700">Shape</label>
+        <select
+          value={shapeType}
+          onChange={e => setShapeType(e.target.value)}
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        >
+          {SHAPE_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
       </div>
       <Button type="submit" variant="primary" size="sm" className="w-full">

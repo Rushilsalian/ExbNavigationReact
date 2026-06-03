@@ -63,6 +63,14 @@ const useBoothStore = create((set, get) => ({
       }))
     }
   },
+  batchUpdateBooths: (updates) =>
+    set(state => {
+      const boothsMap = { ...state.boothsMap }
+      updates.forEach(({ id, changes }) => {
+        if (boothsMap[id]) boothsMap[id] = { ...boothsMap[id], ...changes }
+      })
+      return { boothsMap }
+    }),
   clearBooths: () => set({ boothsMap: {}, boothOrder: [], selectedBoothId: null }),
 }))
 
