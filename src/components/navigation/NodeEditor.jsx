@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import useNavigationStore, { NODE_TYPES } from '../../store/navigationStore'
 import useHallStore from '../../store/hallStore'
+import { createNode } from '../../services/navigationService'
 import Input from '../common/Input'
 import Button from '../common/Button'
-import { generateId } from '../../utils/graphHelpers'
 
 function NodeEditor() {
   const [label, setLabel] = useState('')
@@ -11,6 +11,8 @@ function NodeEditor() {
   const [x, setX] = useState('0')
   const [y, setY] = useState('0')
   const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [apiError, setApiError] = useState(null)
 
   const addNode = useNavigationStore(s => s.addNode)
   const activeHallId = useHallStore(s => s.activeHallId)
@@ -20,32 +22,44 @@ function NodeEditor() {
     if (!label.trim()) e.label = 'Node label is required.'
     if (isNaN(Number(x))) e.x = 'Must be a number.'
     if (isNaN(Number(y))) e.y = 'Must be a number.'
+    if (!activeHallId) e.hall = 'Select a hall first.'
     return e
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
     setErrors({})
+    setApiError(null)
+    setLoading(true)
 
-    addNode({
-      id: generateId('node'),
-      hallId: activeHallId,
-      label: label.trim(),
-      type,
-      x: Number(x),
-      y: Number(y),
-      createdAt: new Date().toISOString(),
-    })
+    try {
+      const node = await createNode({
+        hallId: activeHallId,
+        label: label.trim(),
+        x: Number(x),
+        y: Number(y),
+        nodeType: type.toUpperCase(),
+      })
 
-    setLabel('')
-    setX('0')
-    setY('0')
+      addNode(node)
+      setLabel('')
+      setX('0')
+      setY('0')
+    } catch (err) {
+      setApiError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
+      {errors.hall && (
+        <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">{errors.hall}</p>
+      )}
+
       <Input
         label="Label"
         placeholder="e.g. Entrance A"
@@ -74,8 +88,12 @@ function NodeEditor() {
         <Input label="Y" type="number" value={y} onChange={e => setY(e.target.value)} error={errors.y} />
       </div>
 
-      <Button type="submit" variant="primary" size="sm" className="w-full">
-        Add Node
+      {apiError && (
+        <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{apiError}</p>
+      )}
+
+      <Button type="submit" variant="primary" size="sm" className="w-full" disabled={loading}>
+        {loading ? 'Saving…' : 'Add Node'}
       </Button>
     </form>
   )
