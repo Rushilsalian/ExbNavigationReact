@@ -5,7 +5,7 @@ import Input from '../common/Input'
 import Button from '../common/Button'
 import EmptyState from '../common/EmptyState'
 
-function EdgeEditor() {
+function EdgeEditor({ editorMode, onEditorModeChange }) {
   const [fromId, setFromId] = useState('')
   const [toId, setToId] = useState('')
   const [weight, setWeight] = useState('')
@@ -15,9 +15,13 @@ function EdgeEditor() {
   const [apiError, setApiError] = useState(null)
 
   const addEdge = useNavigationStore(s => s.addEdge)
-  const getAllNodes = useNavigationStore(s => s.getAllNodes)
+  const nodesMap = useNavigationStore(s => s.nodesMap)
+  const connectSource = useNavigationStore(s => s.connectSource)
+  const getNodeById = useNavigationStore(s => s.getNodeById)
 
-  const nodes = getAllNodes()
+  const nodes = Object.values(nodesMap)
+  const isConnectMode = editorMode === 'CONNECT'
+  const sourceNode = connectSource ? getNodeById(connectSource) : null
 
   const validate = () => {
     const e = {}
@@ -44,7 +48,6 @@ function EdgeEditor() {
         bidirectional,
       })
 
-      // result.edges is an array of created edge(s)
       for (const edge of result.edges) {
         addEdge({
           id: edge.id,
@@ -76,62 +79,95 @@ function EdgeEditor() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-slate-700">From Node</label>
-        <select
-          value={fromId}
-          onChange={e => setFromId(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+    <div className="space-y-3">
+      {/* Canvas connect banner */}
+      {isConnectMode ? (
+        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+          <span className="text-xs text-green-700 font-medium">
+            {sourceNode ? `Source: ${sourceNode.label} — click target` : 'Click source node on canvas'}
+          </span>
+          <button
+            type="button"
+            onClick={() => onEditorModeChange('SELECT')}
+            className="text-xs text-green-600 hover:text-green-800 underline"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="w-full"
+          onClick={() => onEditorModeChange('CONNECT')}
+          icon={
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+          }
         >
-          <option value="">Select source…</option>
-          {nodes.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}
-        </select>
-        {errors.from && <p className="text-xs text-red-600">{errors.from}</p>}
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-slate-700">To Node</label>
-        <select
-          value={toId}
-          onChange={e => setToId(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-        >
-          <option value="">Select target…</option>
-          {nodes.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}
-        </select>
-        {errors.to && <p className="text-xs text-red-600">{errors.to}</p>}
-      </div>
-
-      <Input
-        label="Weight (optional)"
-        type="number"
-        min="0.1"
-        step="0.1"
-        value={weight}
-        onChange={e => setWeight(e.target.value)}
-        error={errors.weight}
-        hint="Leave blank to auto-calculate from coordinates"
-      />
-
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={bidirectional}
-          onChange={e => setBidirectional(e.target.checked)}
-          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-        />
-        <span className="text-sm text-slate-700">Bidirectional (two-way)</span>
-      </label>
-
-      {apiError && (
-        <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{apiError}</p>
+          Connect on Canvas
+        </Button>
       )}
 
-      <Button type="submit" variant="primary" size="sm" className="w-full" disabled={loading}>
-        {loading ? 'Saving…' : 'Add Edge'}
-      </Button>
-    </form>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-slate-700">From Node</label>
+          <select
+            value={fromId}
+            onChange={e => setFromId(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+            <option value="">Select source…</option>
+            {nodes.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}
+          </select>
+          {errors.from && <p className="text-xs text-red-600">{errors.from}</p>}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-slate-700">To Node</label>
+          <select
+            value={toId}
+            onChange={e => setToId(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+            <option value="">Select target…</option>
+            {nodes.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}
+          </select>
+          {errors.to && <p className="text-xs text-red-600">{errors.to}</p>}
+        </div>
+
+        <Input
+          label="Weight (optional)"
+          type="number"
+          min="0.1"
+          step="0.1"
+          value={weight}
+          onChange={e => setWeight(e.target.value)}
+          error={errors.weight}
+          hint="Leave blank to auto-calculate from coordinates"
+        />
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={bidirectional}
+            onChange={e => setBidirectional(e.target.checked)}
+            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <span className="text-sm text-slate-700">Bidirectional (two-way)</span>
+        </label>
+
+        {apiError && (
+          <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{apiError}</p>
+        )}
+
+        <Button type="submit" variant="primary" size="sm" className="w-full" disabled={loading}>
+          {loading ? 'Saving…' : 'Add Edge'}
+        </Button>
+      </form>
+    </div>
   )
 }
 

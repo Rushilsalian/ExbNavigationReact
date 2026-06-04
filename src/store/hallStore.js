@@ -3,6 +3,7 @@ import { create } from 'zustand'
 const useHallStore = create((set, get) => ({
   halls: [],
   activeHallId: null,
+  exhibitionId: 1,
   svgContent: null,
   svgDimensions: { width: 0, height: 0 },
   uploadProgress: 0,
@@ -14,6 +15,7 @@ const useHallStore = create((set, get) => ({
   },
 
   setHalls: (halls) => set({ halls }),
+  setExhibitionId: (exhibitionId) => set({ exhibitionId }),
   setActiveHall: (hallId) => set({ activeHallId: hallId }),
   addHall: (hall) => set(state => ({ halls: [...state.halls, hall] })),
   updateHall: (hallId, updates) =>

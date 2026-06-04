@@ -4,15 +4,21 @@ import { computeRoute } from '../../services/navigationService'
 import Button from '../common/Button'
 import EmptyState from '../common/EmptyState'
 
-function RoutePreview() {
+function RoutePreview({ onRouteHighlight }) {
   const [fromId, setFromId] = useState('')
   const [toId, setToId] = useState('')
   const [route, setRoute] = useState(null)
   const [loading, setLoading] = useState(false)
   const [apiError, setApiError] = useState(null)
 
-  const getAllNodes = useNavigationStore(s => s.getAllNodes)
-  const nodes = getAllNodes()
+  const nodesMap = useNavigationStore(s => s.nodesMap)
+  const edgesMap = useNavigationStore(s => s.edgesMap)
+  const nodes = Object.values(nodesMap)
+
+  const clearRoute = () => {
+    setRoute(null)
+    onRouteHighlight?.(null)
+  }
 
   if (nodes.length < 2) {
     return (
@@ -33,10 +39,25 @@ function RoutePreview() {
     if (!fromId || !toId || fromId === toId) return
     setApiError(null)
     setRoute(null)
+    onRouteHighlight?.(null)
     setLoading(true)
     try {
       const result = await computeRoute({ fromNodeId: Number(fromId), toNodeId: Number(toId) })
       setRoute(result)
+
+      // Derive highlight sets from route
+      const nodeIds = new Set(result.coordinates.map(c => String(c.nodeId)))
+      const edgeIds = new Set()
+      for (let i = 0; i < result.path.length - 1; i++) {
+        const src = String(result.path[i])
+        const tgt = String(result.path[i + 1])
+        const edge = Object.values(edgesMap).find(ed =>
+          (String(ed.sourceId) === src && String(ed.targetId) === tgt) ||
+          (!ed.directed && String(ed.sourceId) === tgt && String(ed.targetId) === src)
+        )
+        if (edge) edgeIds.add(edge.id)
+      }
+      onRouteHighlight?.({ nodeIds, edgeIds })
     } catch (err) {
       setApiError(err.message)
     } finally {
@@ -51,7 +72,7 @@ function RoutePreview() {
           <label className="text-sm font-medium text-slate-700">From</label>
           <select
             value={fromId}
-            onChange={e => { setFromId(e.target.value); setRoute(null) }}
+            onChange={e => { setFromId(e.target.value); clearRoute() }}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           >
             <option value="">Select start node…</option>
@@ -63,7 +84,7 @@ function RoutePreview() {
           <label className="text-sm font-medium text-slate-700">To</label>
           <select
             value={toId}
-            onChange={e => { setToId(e.target.value); setRoute(null) }}
+            onChange={e => { setToId(e.target.value); clearRoute() }}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           >
             <option value="">Select end node…</option>
@@ -90,9 +111,18 @@ function RoutePreview() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-700">Shortest Path</span>
-            <span className="text-xs text-indigo-600 font-medium">
-              {route.totalDistance} units · {route.path.length} stops
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-indigo-600 font-medium">
+                {route.totalDistance} units · {route.path.length} stops
+              </span>
+              <button
+                type="button"
+                onClick={clearRoute}
+                className="text-xs text-slate-400 hover:text-slate-600 underline"
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
           <ol className="space-y-1">

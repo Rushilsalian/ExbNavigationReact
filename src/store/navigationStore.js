@@ -5,6 +5,7 @@ export const NODE_TYPES = {
   ENTRY: 'entry',
   EXIT: 'exit',
   ESCALATOR: 'escalator',
+  STAIRS: 'stairs',
   LIFT: 'lift',
   JUNCTION: 'junction',
 }

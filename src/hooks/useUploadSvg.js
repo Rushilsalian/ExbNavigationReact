@@ -1,50 +1,48 @@
-import { useMutation } from '@tanstack/react-query'
-import { uploadHallSvg } from '../services/hallService'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { uploadHallWithSvg } from '../services/hallService'
 import useHallStore from '../store/hallStore'
 
-/**
- * React Query mutation for uploading an SVG file to the backend.
- * Tracks upload progress via Zustand hallStore so any component can read it.
- *
- * @param {string} hallId - The hall to associate the SVG with
- * @returns {{ upload, isPending, isSuccess, error }}
- */
-const useUploadSvg = (hallId) => {
+const useUploadSvg = () => {
   const setUploadProgress = useHallStore(s => s.setUploadProgress)
   const setIsUploading = useHallStore(s => s.setIsUploading)
+  const exhibitionId = useHallStore(s => s.exhibitionId)
+  const addHall = useHallStore(s => s.addHall)
+  const setActiveHall = useHallStore(s => s.setActiveHall)
+  const queryClient = useQueryClient()
 
   const mutation = useMutation({
-    mutationFn: ({ file }) => {
-      const formData = new FormData()
-      formData.append('svg', file)
-
-      // Axios onUploadProgress callback — updates Zustand store
+    mutationFn: ({ file, hallName }) => {
       const onUploadProgress = (progressEvent) => {
         if (progressEvent.total) {
           const pct = Math.round((progressEvent.loaded / progressEvent.total) * 100)
           setUploadProgress(pct)
         }
       }
-
-      return uploadHallSvg(hallId, formData, onUploadProgress)
+      return uploadHallWithSvg(exhibitionId, hallName, file, onUploadProgress)
     },
     onMutate: () => {
       setIsUploading(true)
       setUploadProgress(0)
+    },
+    onSuccess: (data) => {
+      // data = { hall, boothsExtracted, boothsSample }
+      addHall(data.hall)
+      setActiveHall(data.hall.id)
+      queryClient.invalidateQueries({ queryKey: ['halls'] })
     },
     onSettled: () => {
       setIsUploading(false)
     },
   })
 
-  // Convenience wrapper so callers just do upload(file)
-  const upload = (file) => mutation.mutate({ file })
+  const upload = (file, hallName) => mutation.mutate({ file, hallName })
 
   return {
     upload,
     isPending: mutation.isPending,
     isSuccess: mutation.isSuccess,
     error: mutation.error,
+    data: mutation.data,
   }
 }
 
