@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import useNavigationStore from '../store/navigationStore'
 import useHallStore from '../store/hallStore'
+import { useActiveHallQuery } from '../hooks/useHalls'
+import { useBoothsQuery } from '../hooks/useBooths'
 import NodeEditor from '../components/navigation/NodeEditor'
 import EdgeEditor from '../components/navigation/EdgeEditor'
 import RoutePreview from '../components/navigation/RoutePreview'
@@ -18,6 +20,8 @@ function NavigationEditor() {
   const activeHallId = useHallStore(s => s.activeHallId)
   const halls = useHallStore(s => s.halls)
   const nodesMap = useNavigationStore(s => s.nodesMap)
+  useActiveHallQuery()
+  useBoothsQuery()
   const edgesMap = useNavigationStore(s => s.edgesMap)
   const nodes = Object.values(nodesMap)
   const activeHall = halls.find(h => h.id === activeHallId) ?? null

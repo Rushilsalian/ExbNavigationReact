@@ -6,6 +6,7 @@ import useKonvaZoomPan from '../../hooks/useKonvaZoomPan'
 import useSvgBackground from '../../hooks/useSvgBackground'
 import useGraphEditing from '../../hooks/useGraphEditing'
 import GraphLayer from './GraphLayer'
+import BoothReferenceLayer from './BoothReferenceLayer'
 import GraphToolbar from './GraphToolbar'
 import EmptyState from '../common/EmptyState'
 
@@ -114,8 +115,8 @@ export default function GraphCanvas({
         zoomIn={zoomIn}
         zoomOut={zoomOut}
         resetView={resetView}
-        nodeCount={nodes.length}
-        edgeCount={edges.length}
+        nodeCount={nodeCount}
+        edgeCount={edgeCount}
       />
 
       <div
@@ -154,6 +155,8 @@ export default function GraphCanvas({
               />
             )}
           </Layer>
+
+          <BoothReferenceLayer />
 
           <GraphLayer
             editorMode={editorMode}

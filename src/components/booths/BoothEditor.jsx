@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import useBoothStore from '../../store/boothStore'
+import { useCreateBoothMutation } from '../../hooks/useBooths'
 import useHallStore from '../../store/hallStore'
 import Input from '../common/Input'
 import Button from '../common/Button'
-import { generateId } from '../../utils/graphHelpers'
 
 const CATEGORIES = ['General', 'Food & Beverage', 'Technology', 'Fashion', 'Art', 'Services', 'Other']
 const SHAPE_TYPES = [
@@ -18,43 +17,52 @@ function BoothEditor() {
   const [category, setCategory] = useState('General')
   const [shapeType, setShapeType] = useState('rect')
   const [errors, setErrors] = useState({})
+  const [apiError, setApiError] = useState(null)
 
-  const addBooth = useBoothStore(s => s.addBooth)
   const activeHallId = useHallStore(s => s.activeHallId)
+  const createBoothMutation = useCreateBoothMutation()
 
   const validate = () => {
     const e = {}
     if (!name.trim()) e.name = 'Booth name is required.'
     if (!number.trim()) e.number = 'Booth number is required.'
+    if (!activeHallId) e.hall = 'Select a hall first.'
     return e
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const e2 = validate()
-    if (Object.keys(e2).length > 0) { setErrors(e2); return }
+    const errs = validate()
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
     setErrors({})
+    setApiError(null)
 
-    addBooth({
-      id: generateId('booth'),
-      hallId: activeHallId,
-      name: name.trim(),
-      number: number.trim(),
-      category,
-      shapeType,
-      x: 100, y: 100, width: 80, height: 60,
-      rotation: 0,
-      createdAt: new Date().toISOString(),
-    })
-
-    setName('')
-    setNumber('')
-    setCategory('General')
-    setShapeType('rect')
+    try {
+      await createBoothMutation.mutateAsync({
+        name: name.trim(),
+        number: number.trim(),
+        category,
+        shapeType,
+        x: 100,
+        y: 100,
+        width: 80,
+        height: 60,
+        rotation: 0,
+      })
+      setName('')
+      setNumber('')
+      setCategory('General')
+      setShapeType('rect')
+    } catch (err) {
+      setApiError(err.message)
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 pb-3 border-b border-slate-200">
+      {errors.hall && (
+        <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">{errors.hall}</p>
+      )}
       <Input
         label="Booth Name"
         placeholder="e.g. Tech Innovations"
@@ -89,7 +97,17 @@ function BoothEditor() {
           {SHAPE_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
       </div>
-      <Button type="submit" variant="primary" size="sm" className="w-full">
+      {apiError && (
+        <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{apiError}</p>
+      )}
+      <Button
+        type="submit"
+        variant="primary"
+        size="sm"
+        className="w-full"
+        loading={createBoothMutation.isPending}
+        disabled={!activeHallId}
+      >
         Add Booth
       </Button>
     </form>

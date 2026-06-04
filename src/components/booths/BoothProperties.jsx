@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import useBoothStore from '../../store/boothStore'
 import useBoothSelection from '../../hooks/useBoothSelection'
+import { useUpdateBoothMutation, useDeleteBoothMutation } from '../../hooks/useBooths'
 import Input from '../common/Input'
 import Button from '../common/Button'
 
@@ -30,21 +32,39 @@ function NumericInput({ label, field, value, onChange }) {
 }
 
 function BoothProperties() {
+  const [apiError, setApiError] = useState(null)
+
   const isEditing = useBoothStore(s => s.isEditing)
   const editDraft = useBoothStore(s => s.editDraft)
   const startEdit = useBoothStore(s => s.startEdit)
   const cancelEdit = useBoothStore(s => s.cancelEdit)
-  const commitEdit = useBoothStore(s => s.commitEdit)
   const updateEditDraft = useBoothStore(s => s.updateEditDraft)
-  const removeBooth = useBoothStore(s => s.removeBooth)
 
   const { selectedBooth, deselectBooth } = useBoothSelection()
 
+  const updateMutation = useUpdateBoothMutation()
+  const deleteMutation = useDeleteBoothMutation()
+
   if (!selectedBooth) return null
 
-  const handleDelete = () => {
-    removeBooth(selectedBooth.id)
-    deselectBooth()
+  const handleSave = async () => {
+    if (!editDraft) return
+    setApiError(null)
+    try {
+      await updateMutation.mutateAsync({ boothId: selectedBooth.id, updates: editDraft })
+      cancelEdit()
+    } catch (err) {
+      setApiError(err.message)
+    }
+  }
+
+  const handleDelete = async () => {
+    setApiError(null)
+    try {
+      await deleteMutation.mutateAsync(selectedBooth.id)
+    } catch (err) {
+      setApiError(err.message)
+    }
   }
 
   const displayBooth = isEditing ? editDraft : selectedBooth
@@ -98,8 +118,20 @@ function BoothProperties() {
             </select>
           </div>
 
+          {apiError && (
+            <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{apiError}</p>
+          )}
+
           <div className="flex gap-2 pt-2">
-            <Button variant="primary" size="sm" className="flex-1" onClick={commitEdit}>Save</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              className="flex-1"
+              onClick={handleSave}
+              loading={updateMutation.isPending}
+            >
+              Save
+            </Button>
             <Button variant="secondary" size="sm" onClick={cancelEdit}>Cancel</Button>
           </div>
         </div>
@@ -119,9 +151,20 @@ function BoothProperties() {
           <PropRow label="Rotation" value={`${displayBooth?.rotation ?? 0}°`} />
           <PropRow label="Shape" value={SHAPE_TYPES.find(s => s.value === displayBooth?.shapeType)?.label ?? 'Rectangle'} />
 
+          {apiError && (
+            <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{apiError}</p>
+          )}
+
           <div className="flex gap-2 pt-2 border-t border-slate-200">
             <Button variant="secondary" size="sm" className="flex-1" onClick={startEdit}>Edit</Button>
-            <Button variant="danger" size="sm" onClick={handleDelete}>Delete</Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleDelete}
+              loading={deleteMutation.isPending}
+            >
+              Delete
+            </Button>
           </div>
         </div>
       )}

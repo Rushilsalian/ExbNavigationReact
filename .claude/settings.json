@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/admin-panel-node/src/middlewares/**)",
+      "Read(//d/admin-panel-node/src/config/**)",
+      "Read(//d/admin-panel-node/src/services/**)",
+      "Read(//d/admin-panel-node/src/routes/**)",
+      "Read(//d/admin-panel-node/src/**)",
+      "Read(//d/admin-panel-node/src/controllers/**)"
+    ],
+    "additionalDirectories": [
+      "d:\\admin-panel-node\\src\\controllers",
+      "d:\\admin-panel-node\\src"
+    ]
+  }
+}

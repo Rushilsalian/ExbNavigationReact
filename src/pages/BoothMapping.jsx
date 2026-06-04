@@ -1,15 +1,21 @@
 import useBoothStore from '../store/boothStore'
 import useHallStore from '../store/hallStore'
+import { useBoothsQuery } from '../hooks/useBooths'
+import { useActiveHallQuery } from '../hooks/useHalls'
 import BoothList from '../components/booths/BoothList'
 import BoothEditor from '../components/booths/BoothEditor'
 import BoothProperties from '../components/booths/BoothProperties'
 import EmptyState from '../components/common/EmptyState'
 import BoothCanvas from '../components/booths/BoothCanvas'
+import Loader from '../components/common/Loader'
 
 function BoothMapping() {
   const activeHallId = useHallStore(s => s.activeHallId)
   const halls = useHallStore(s => s.halls)
   const selectedBoothId = useBoothStore(s => s.selectedBoothId)
+
+  const { isLoading: boothsLoading, isError: boothsError } = useBoothsQuery()
+  useActiveHallQuery()
 
   const activeHall = halls.find(h => h.id === activeHallId) ?? null
 
@@ -32,7 +38,17 @@ function BoothMapping() {
       {/* Canvas area */}
       <div className="flex-1 bg-white rounded-xl border border-slate-200 overflow-hidden">
         {activeHallId ? (
-          <BoothCanvas />
+          boothsLoading ? (
+            <div className="flex h-full items-center justify-center">
+              <Loader size="md" label="Loading booths…" />
+            </div>
+          ) : boothsError ? (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-sm text-amber-600">Could not load booths from server.</p>
+            </div>
+          ) : (
+            <BoothCanvas />
+          )
         ) : (
           <EmptyState
             title="No Hall Selected"

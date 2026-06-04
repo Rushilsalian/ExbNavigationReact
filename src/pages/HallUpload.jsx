@@ -4,6 +4,7 @@ import useSvgUpload from '../hooks/useSvgUpload'
 import useUploadSvg from '../hooks/useUploadSvg'
 import useZoomPan from '../hooks/useZoomPan'
 import { useHallsQuery, useDeleteHallMutation } from '../hooks/useHalls'
+import { useExhibitionsQuery, useCreateExhibitionMutation } from '../hooks/useExhibitions'
 import SvgUploader from '../components/svg/SvgUploader'
 import SvgPreview from '../components/svg/SvgPreview'
 import SvgToolbar from '../components/svg/SvgToolbar'
@@ -16,6 +17,9 @@ import { formatFileSize } from '../utils/svgHelpers'
 function HallUpload() {
   const [hallName, setHallName] = useState('')
   const [nameError, setNameError] = useState('')
+  const [showNewExhibition, setShowNewExhibition] = useState(false)
+  const [newExhibitionName, setNewExhibitionName] = useState('')
+  const [newExhibitionError, setNewExhibitionError] = useState('')
 
   const halls = useHallStore(s => s.halls)
   const activeHallId = useHallStore(s => s.activeHallId)
@@ -28,10 +32,10 @@ function HallUpload() {
   const setActiveHall = useHallStore(s => s.setActiveHall)
   const clearSvg = useHallStore(s => s.clearSvg)
 
-  const [exhibitionInput, setExhibitionInput] = useState(String(exhibitionId))
-
   const activeHall = halls.find(h => h.id === activeHallId) ?? null
 
+  const { data: exhibitions = [], isLoading: exhibitionsLoading } = useExhibitionsQuery()
+  const createExhibitionMutation = useCreateExhibitionMutation()
   const { isLoading: hallsLoading, isError: hallsFetchError } = useHallsQuery()
   const deleteHallMutation = useDeleteHallMutation()
 
@@ -40,10 +44,26 @@ function HallUpload() {
 
   const zoomPan = useZoomPan(1)
 
-  const handleExhibitionChange = (val) => {
-    setExhibitionInput(val)
-    const parsed = parseInt(val)
-    if (!isNaN(parsed) && parsed > 0) setExhibitionId(parsed)
+  const activeExhibition = exhibitions.find(e => e.id === exhibitionId) ?? null
+
+  const handleExhibitionSelect = (e) => {
+    const id = parseInt(e.target.value)
+    if (!isNaN(id)) setExhibitionId(id)
+  }
+
+  const handleCreateExhibition = async () => {
+    if (!newExhibitionName.trim()) {
+      setNewExhibitionError('Exhibition name is required.')
+      return
+    }
+    setNewExhibitionError('')
+    try {
+      await createExhibitionMutation.mutateAsync({ name: newExhibitionName.trim() })
+      setNewExhibitionName('')
+      setShowNewExhibition(false)
+    } catch (err) {
+      setNewExhibitionError(err.message)
+    }
   }
 
   const handleUploadHall = () => {
@@ -52,6 +72,7 @@ function HallUpload() {
       return
     }
     if (!svgContent) return
+    if (!exhibitionId) return
     setNameError('')
     const blob = new Blob([svgContent], { type: 'image/svg+xml' })
     const file = new File([blob], 'floor-plan.svg', { type: 'image/svg+xml' })
@@ -70,25 +91,88 @@ function HallUpload() {
   return (
     <div className="space-y-6 max-w-5xl">
 
-      {/* Exhibition context */}
+      {/* Exhibition selector */}
       <div className="bg-white rounded-xl border border-slate-200 p-5">
         <h2 className="text-sm font-semibold text-slate-800 mb-4">Exhibition</h2>
-        <div className="flex items-end gap-3">
-          <Input
-            label="Exhibition ID"
-            type="number"
-            placeholder="e.g. 1"
-            value={exhibitionInput}
-            onChange={e => handleExhibitionChange(e.target.value)}
-            className="w-40"
-          />
-          <p className="text-xs text-slate-500 pb-1">All halls are scoped to this exhibition.</p>
-        </div>
+
+        {exhibitionsLoading ? (
+          <Loader size="sm" label="Loading exhibitions…" />
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-end gap-3 flex-wrap">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-slate-700">Select Exhibition</label>
+                <select
+                  value={exhibitionId ?? ''}
+                  onChange={handleExhibitionSelect}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-w-[220px]"
+                >
+                  {exhibitions.length === 0 && (
+                    <option value="" disabled>No exhibitions — create one below</option>
+                  )}
+                  {exhibitions.map(ex => (
+                    <option key={ex.id} value={ex.id}>
+                      #{ex.id} — {ex.name}{!ex.isActive ? ' (inactive)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {activeExhibition && (
+                <p className="text-xs text-slate-500 pb-1">
+                  All halls are scoped to <strong className="text-slate-700">{activeExhibition.name}</strong>
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={() => { setShowNewExhibition(v => !v); setNewExhibitionError('') }}
+                className="text-xs text-indigo-600 hover:text-indigo-800 underline pb-1 ml-auto"
+              >
+                {showNewExhibition ? 'Cancel' : '+ New exhibition'}
+              </button>
+            </div>
+
+            {showNewExhibition && (
+              <div className="flex items-end gap-2 bg-slate-50 rounded-lg p-3 border border-slate-200">
+                <div className="flex-1">
+                  <Input
+                    label="Exhibition Name"
+                    placeholder="e.g. TechExpo 2025"
+                    value={newExhibitionName}
+                    onChange={e => { setNewExhibitionName(e.target.value); setNewExhibitionError('') }}
+                    error={newExhibitionError}
+                  />
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleCreateExhibition}
+                  loading={createExhibitionMutation.isPending}
+                >
+                  Create
+                </Button>
+              </div>
+            )}
+
+            {exhibitions.length === 0 && !showNewExhibition && (
+              <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                No exhibitions found in the database. Create one above before uploading halls.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Upload new hall */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
         <h2 className="text-sm font-semibold text-slate-800">Upload New Hall</h2>
+
+        {!exhibitionId && (
+          <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+            Select an exhibition above before uploading a hall.
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-3 items-end">
           <Input
@@ -149,6 +233,7 @@ function HallUpload() {
                   size="sm"
                   onClick={handleUploadHall}
                   loading={isUploading || isApiUploading}
+                  disabled={!exhibitionId}
                 >
                   Upload Hall
                 </Button>
@@ -174,7 +259,9 @@ function HallUpload() {
       <div className="bg-white rounded-xl border border-slate-200 p-5">
         <h2 className="text-sm font-semibold text-slate-800 mb-4">
           Existing Halls
-          <span className="ml-2 text-xs font-normal text-slate-400">Exhibition {exhibitionId}</span>
+          {activeExhibition && (
+            <span className="ml-2 text-xs font-normal text-slate-400">{activeExhibition.name}</span>
+          )}
         </h2>
 
         {hallsLoading ? (
@@ -214,7 +301,9 @@ function HallUpload() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-slate-400">No halls found for exhibition {exhibitionId}. Upload one above.</p>
+          <p className="text-sm text-slate-400">
+            No halls found{activeExhibition ? ` for ${activeExhibition.name}` : ''}. Upload one above.
+          </p>
         )}
 
         {activeHall && (
