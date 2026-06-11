@@ -17,5 +17,6 @@ export const uploadHallWithSvg = (exhibitionId, hallName, file, onUploadProgress
   return api.post('/svg/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress,
+    timeout: 120_000,
   }).then(r => r.data.data)
 }

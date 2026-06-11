@@ -15,9 +15,17 @@ function RoutePreview({ onRouteHighlight }) {
   const edgesMap = useNavigationStore(s => s.edgesMap)
   const nodes = Object.values(nodesMap)
 
+  const highlightSelected = (from, to) => {
+    const ids = [from, to].filter(Boolean)
+    onRouteHighlight?.(ids.length > 0
+      ? { nodeIds: new Set(ids.map(String)), edgeIds: new Set() }
+      : null
+    )
+  }
+
   const clearRoute = () => {
     setRoute(null)
-    onRouteHighlight?.(null)
+    highlightSelected(fromId, toId)
   }
 
   if (nodes.length < 2) {
@@ -72,7 +80,7 @@ function RoutePreview({ onRouteHighlight }) {
           <label className="text-sm font-medium text-slate-700">From</label>
           <select
             value={fromId}
-            onChange={e => { setFromId(e.target.value); clearRoute() }}
+            onChange={e => { const v = e.target.value; setFromId(v); setRoute(null); highlightSelected(v, toId) }}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           >
             <option value="">Select start node…</option>
@@ -84,7 +92,7 @@ function RoutePreview({ onRouteHighlight }) {
           <label className="text-sm font-medium text-slate-700">To</label>
           <select
             value={toId}
-            onChange={e => { setToId(e.target.value); clearRoute() }}
+            onChange={e => { const v = e.target.value; setToId(v); setRoute(null); highlightSelected(fromId, v) }}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           >
             <option value="">Select end node…</option>

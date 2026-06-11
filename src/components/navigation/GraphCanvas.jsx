@@ -40,8 +40,16 @@ export default function GraphCanvas({
     stageScale, stagePos,
     handleWheel, handleStageDragEnd,
     handleTouchMove, handleTouchEnd,
-    zoomIn, zoomOut, resetView,
+    zoomIn, zoomOut, resetView, fitView,
   } = useKonvaZoomPan(stageRef)
+
+  // Auto-fit the floor plan into the container whenever the SVG background changes
+  useEffect(() => {
+    if (!bgImage || !containerSize.width || !containerSize.height) return
+    const imgW = svgDimensions?.width || bgImage.naturalWidth
+    const imgH = svgDimensions?.height || bgImage.naturalHeight
+    fitView(imgW, imgH, containerSize.width, containerSize.height)
+  }, [bgImage]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const {
     connectSourceId,

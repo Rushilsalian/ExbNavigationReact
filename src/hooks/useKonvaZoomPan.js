@@ -92,6 +92,19 @@ export default function useKonvaZoomPan(stageRef) {
     setStagePos({ x: 0, y: 0 })
   }, [])
 
+  const fitView = useCallback((imageWidth, imageHeight, containerWidth, containerHeight) => {
+    if (!imageWidth || !imageHeight || !containerWidth || !containerHeight) return
+    const scale = clamp(
+      Math.min(containerWidth / imageWidth, containerHeight / imageHeight) * 0.92,
+      MIN_SCALE, MAX_SCALE
+    )
+    setStageScale(scale)
+    setStagePos({
+      x: (containerWidth - imageWidth * scale) / 2,
+      y: (containerHeight - imageHeight * scale) / 2,
+    })
+  }, [])
+
   useEffect(() => {
     const handleKey = (e) => {
       const tag = document.activeElement?.tagName
@@ -116,5 +129,6 @@ export default function useKonvaZoomPan(stageRef) {
     zoomIn,
     zoomOut,
     resetView,
+    fitView,
   }
 }

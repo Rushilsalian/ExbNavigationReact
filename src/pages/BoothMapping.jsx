@@ -2,6 +2,7 @@ import useBoothStore from '../store/boothStore'
 import useHallStore from '../store/hallStore'
 import { useBoothsQuery } from '../hooks/useBooths'
 import { useActiveHallQuery } from '../hooks/useHalls'
+import useNavigationQuery from '../hooks/useNavigation'
 import BoothList from '../components/booths/BoothList'
 import BoothEditor from '../components/booths/BoothEditor'
 import BoothProperties from '../components/booths/BoothProperties'
@@ -12,10 +13,12 @@ import Loader from '../components/common/Loader'
 function BoothMapping() {
   const activeHallId = useHallStore(s => s.activeHallId)
   const halls = useHallStore(s => s.halls)
+  const setActiveHall = useHallStore(s => s.setActiveHall)
   const selectedBoothId = useBoothStore(s => s.selectedBoothId)
 
   const { isLoading: boothsLoading, isError: boothsError } = useBoothsQuery()
   useActiveHallQuery()
+  useNavigationQuery()
 
   const activeHall = halls.find(h => h.id === activeHallId) ?? null
 
@@ -24,12 +27,19 @@ function BoothMapping() {
       {/* Left panel */}
       <div className="w-72 shrink-0 flex flex-col gap-4 overflow-hidden">
         <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-3 overflow-hidden flex-1">
-          <h2 className="text-sm font-semibold text-slate-800 shrink-0">
-            Booths
-            {activeHall && (
-              <span className="ml-1 text-indigo-600">— {activeHall.name}</span>
-            )}
-          </h2>
+          <div className="shrink-0 flex flex-col gap-1">
+            <h2 className="text-sm font-semibold text-slate-800">Booths</h2>
+            <select
+              value={activeHallId ?? ''}
+              onChange={e => setActiveHall(e.target.value ? Number(e.target.value) : null)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Select a hall…</option>
+              {halls.map(hall => (
+                <option key={hall.id} value={hall.id}>{hall.name}</option>
+              ))}
+            </select>
+          </div>
           <BoothEditor />
           <BoothList />
         </div>

@@ -32,15 +32,17 @@ function intersects(aabb, rect) {
   )
 }
 
+const CULL_PADDING = 300 // extra SVG units beyond visible edges before culling
+
 export default function useViewportCulling(booths, stageScale, stagePos, containerSize, selectedBoothId) {
   return useMemo(() => {
     if (!booths.length) return []
 
     const visibleRect = {
-      x: -stagePos.x / stageScale,
-      y: -stagePos.y / stageScale,
-      width: containerSize.width / stageScale,
-      height: containerSize.height / stageScale,
+      x: -stagePos.x / stageScale - CULL_PADDING,
+      y: -stagePos.y / stageScale - CULL_PADDING,
+      width: containerSize.width / stageScale + CULL_PADDING * 2,
+      height: containerSize.height / stageScale + CULL_PADDING * 2,
     }
 
     return booths.filter(booth => {

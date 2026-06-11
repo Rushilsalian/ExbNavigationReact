@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
 import useNavigationStore from '../store/navigationStore'
-import { createNode, createEdge } from '../services/navigationService'
+import { createNode, createEdge, updateNode as updateNodeApi, deleteNode as deleteNodeApi, deleteEdge as deleteEdgeApi } from '../services/navigationService'
 import { screenToSvg } from '../utils/coordinateUtils'
+import { NODE_TYPE_CONFIG } from '../utils/nodeTypeConfig'
 
 export const EDITOR_MODES = {
   SELECT: 'SELECT',
@@ -20,6 +21,7 @@ export default function useGraphEditing({
 }) {
   const [connectSourceId, setConnectSourceId] = useState(null)
 
+  const nodesMap = useNavigationStore(s => s.nodesMap)
   const addNode = useNavigationStore(s => s.addNode)
   const updateNode = useNavigationStore(s => s.updateNode)
   const removeNode = useNavigationStore(s => s.removeNode)
@@ -45,14 +47,17 @@ export default function useGraphEditing({
       })
 
       try {
+        const type = (pendingNodeType || 'walkway').toLowerCase()
+        const typeLabel = NODE_TYPE_CONFIG[type]?.label ?? 'Node'
+        const sameTypeCount = Object.values(nodesMap).filter(n => n.nodeType === type).length
         const node = await createNode({
           hallId: activeGraphHallId,
-          label: `Node ${Date.now().toString().slice(-4)}`,
+          label: `${typeLabel} ${sameTypeCount + 1}`,
           x: Math.round(x),
           y: Math.round(y),
-          nodeType: (pendingNodeType || 'walkway').toUpperCase(),
+          nodeType: type.toUpperCase(),
         })
-        addNode(node)
+        addNode({ ...node, nodeType: node.nodeType?.toLowerCase() ?? type })
         selectNode(node.id)
       } catch (err) {
         console.error('Failed to create node:', err)
@@ -113,6 +118,7 @@ export default function useGraphEditing({
       removeNode(node.id)
       setConnectSourceId(null)
       setConnectSource(null)
+      deleteNodeApi(node.id).catch(err => console.error('Failed to delete node:', err))
     }
   }, [editorMode, connectSourceId, selectNode, clearSelection, addEdge, removeNode, setConnectSource])
 
@@ -123,14 +129,15 @@ export default function useGraphEditing({
     }
     if (editorMode === EDITOR_MODES.DELETE) {
       removeEdge(edge.id)
+      deleteEdgeApi(edge.id).catch(err => console.error('Failed to delete edge:', err))
     }
   }, [editorMode, selectEdge, removeEdge])
 
   const handleNodeDragEnd = useCallback((nodeId, e) => {
-    updateNode(nodeId, {
-      x: Math.round(e.target.x()),
-      y: Math.round(e.target.y()),
-    })
+    const x = Math.round(e.target.x())
+    const y = Math.round(e.target.y())
+    updateNode(nodeId, { x, y })
+    updateNodeApi(nodeId, { x, y }).catch(err => console.error('Failed to persist node position:', err))
   }, [updateNode])
 
   const resetConnectSource = useCallback(() => {
